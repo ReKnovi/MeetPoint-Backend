@@ -2,12 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import passport from 'passport';
-// import authRoutes from './routes/authRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import errorHandler from './middleware/errorHandler.js';
 // import professionalRoutes from './routes/professionalRoutes.js';
 // import appointmentRoutes from './routes/appointmentRoutes.js';
 // import adminRoutes from './routes/adminRoutes.js';
 // import paymentRoutes from './routes/paymentRoutes.js';
-// import errorHandler from './middleware/errorHandler.js';
 import './config/passport.js';
 
 const app = express();
@@ -19,15 +19,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use(passport.initialize());
 
-// // Routes
-// app.use('/api/auth', authRoutes);
+// Routes
+app.use('/api/auth', authRoutes);
 // app.use('/api/professionals', professionalRoutes);
 // app.use('/api/appointments', appointmentRoutes);
 // app.use('/api/admin', adminRoutes);
 // app.use('/api/payments', paymentRoutes);
 
-// // Error handling
-// app.use(errorHandler);
+// Error handling
+app.use(errorHandler);
 
 // Test route
 app.get('/', (req, res) => {

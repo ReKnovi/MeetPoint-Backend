@@ -11,7 +11,8 @@ export const NODE_ENV = process.env.NODE_ENV || 'development';
 // App Constants
 export const USER_ROLES = {
   USER: 'user',
-  ADMIN: 'admin'
+  ADMIN: 'admin',
+  SUPERADMIN: 'superadmin'
 };
 
 export const APPOINTMENT_STATUS = {
