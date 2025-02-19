@@ -6,6 +6,7 @@ export const PORT = process.env.PORT || 5000;
 export const DB_URI = process.env.MONGODB_URI;
 export const DB_NAME = process.env.DB_NAME || 'appointment-system';
 export const JWT_SECRET = process.env.JWT_SECRET;
+export const JWT_REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_TOKEN_SECRET;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // App Constants

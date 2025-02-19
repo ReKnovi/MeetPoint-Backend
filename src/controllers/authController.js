@@ -1,5 +1,5 @@
 import User from '../models/User.js';
-import { generateToken } from '../utils/jwt.js';
+import { generateToken, generateRefreshToken } from '../utils/jwt.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { transporter } from '../utils/email.js';
 import crypto from 'crypto';
@@ -7,7 +7,6 @@ import crypto from 'crypto';
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, confirmPassword, role } = req.body;
-    console.log()
 
     // Validate input
     if (!name || !email || !password || !confirmPassword) {
@@ -48,7 +47,7 @@ export const registerUser = async (req, res) => {
     });
 
     // Send verification email
-    const verificationUrl = `${process.env.BASE_URL}/verify-email/${verificationToken}`;
+    const verificationUrl = `${process.env.BASE_URL}/api/auth/verify-email/${verificationToken}`;
     
     const mailOptions = {
       from: process.env.EMAIL_FROM,
@@ -65,10 +64,15 @@ export const registerUser = async (req, res) => {
 
     // Generate JWT
     const token = generateToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
 
     res.status(HTTP_STATUS.CREATED).json({
       success: true,
       token,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -109,6 +113,10 @@ export const loginUser = async (req, res) => {
 
     // Generate JWT
     const token = generateToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -118,7 +126,39 @@ export const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isVerified: user.isVerified,
       },
+    });
+  } catch (error) {
+    res.status(HTTP_STATUS.SERVER_ERROR).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    const user = await User.findOne({ refreshToken });
+    if (!user) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: 'Invalid refresh token',
+      });
+    }
+
+    const token = generateToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      token,
+      refreshToken: newRefreshToken,
     });
   } catch (error) {
     res.status(HTTP_STATUS.SERVER_ERROR).json({
@@ -150,11 +190,8 @@ export const verifyEmail = async (req, res) => {
       verificationTokenExpires: { $gt: Date.now() }
     });
 
-    if (!user) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        success: false,
-        message: 'Invalid or expired token'
-      });
+     if (!user) {
+      return res.redirect(`${process.env.FRONTEND_URL}/verify-email?success=false&message=Invalid%20or%20expired%20token`);
     }
 
     user.isVerified = true;
@@ -162,9 +199,82 @@ export const verifyEmail = async (req, res) => {
     user.verificationTokenExpires = undefined;
     await user.save();
 
+     res.redirect(`${process.env.FRONTEND_URL}/verify-email?success=true`);
+  } catch (error) {
+    res.redirect(`${process.env.FRONTEND_URL}/verify-email?success=false&message=${encodeURIComponent(error.message)}`);
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetTokenExpires = Date.now() + 3600000; // 1 hour
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordTokenExpires = resetTokenExpires;
+    await user.save();
+
+    const resetUrl = `${process.env.FRONTEND_URL}/setPassword/${resetToken}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: user.email,
+      subject: 'Password Reset',
+      html: `
+        <p>You requested a password reset. Click the link below to reset your password:</p>
+        <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Reset Password</a>
+        <p>This link expires in 1 hour</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
     res.status(HTTP_STATUS.OK).json({
       success: true,
-      message: 'Email verified successfully'
+      message: 'Password reset email sent',
+    });
+  } catch (error) {
+    res.status(HTTP_STATUS.SERVER_ERROR).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordTokenExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: 'Invalid or expired token'
+      });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordTokenExpires = undefined;
+    await user.save();
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: 'Password reset successfully'
     });
 
   } catch (error) {
