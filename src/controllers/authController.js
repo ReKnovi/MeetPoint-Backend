@@ -72,7 +72,6 @@ export const registerUser = async (req, res) => {
     res.status(HTTP_STATUS.CREATED).json({
       success: true,
       token,
-      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -99,6 +98,14 @@ export const loginUser = async (req, res) => {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
         success: false,
         message: 'Invalid credentials',
+      });
+    }
+
+    if (user.isOauth) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: 'Please login with Google',
+        redirectUrl: `${process.env.BASE_URL}/auth/google`
       });
     }
 
@@ -281,6 +288,59 @@ export const resetPassword = async (req, res) => {
     res.status(HTTP_STATUS.SERVER_ERROR).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+export const resendVerificationEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: 'Email is already verified',
+      });
+    }
+
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const verificationTokenExpires = Date.now() + 3600000; // 1 hour
+
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpires = verificationTokenExpires;
+    await user.save();
+
+    const verificationUrl = `${process.env.BASE_URL}/api/auth/verify-email/${verificationToken}`;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: user.email,
+      subject: 'Email Verification',
+      html: `
+        <p>Please verify your email by clicking the link below:</p>
+        <a href="${verificationUrl}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007bff; text-decoration: none; border-radius: 5px;">Verify Email</a>
+        <p>This link expires in 1 hour</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: 'Verification email resent',
+    });
+  } catch (error) {
+    res.status(HTTP_STATUS.SERVER_ERROR).json({
+      success: false,
+      message: error.message,
     });
   }
 };

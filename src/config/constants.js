@@ -47,3 +47,7 @@ export const WORKING_HOURS = {
   END: 17     // 5 PM
 };
 
+export const PROFILE_TYPE = {
+  USER: 'user',
+  PROFESSIONAL: 'professional',
+};

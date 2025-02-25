@@ -1,9 +1,10 @@
-import { verifyToken } from '../utils/jwt.js';
+import { verifyToken, verifyRefreshToken, generateToken, generateRefreshToken } from '../utils/jwt.js';
 import { HTTP_STATUS } from '../config/constants.js';
+import User from '../models/User.js';
 
-export const requireAuth = (req, res, next) => {
+export const requireAuth = async (req, res, next) => {
   let token;
-  
+
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
@@ -14,7 +15,7 @@ export const requireAuth = (req, res, next) => {
   if (!token) {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
-      message: 'Not token provided',
+      message: 'No token provided',
     });
   }
 
@@ -23,10 +24,43 @@ export const requireAuth = (req, res, next) => {
     req.user = { id: decoded.id, role: decoded.role };
     next();
   } catch (error) {
-    return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-      success: false,
-      message: 'Not authorized to access this route',
-    });
+    // Token is expired, try to refresh it
+    try {
+      const decoded = jwt.decode(token);
+      const user = await User.findById(decoded.id);
+      if (!user || !user.refreshToken) {
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+          success: false,
+          message: 'Invalid refresh token',
+        });
+      }
+
+      const decodedRefreshToken = verifyRefreshToken(user.refreshToken);
+      if (!decodedRefreshToken) {
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+          success: false,
+          message: 'Invalid refresh token',
+        });
+      }
+
+      // Generate new tokens
+      const accessToken = generateToken(user);
+      const RefreshToken = generateRefreshToken(user);
+
+      user.refreshToken = RefreshToken;
+      await user.save();
+
+      res.setHeader('accesstoken', accessToken);
+      res.setHeader('refreshtoken', RefreshToken);
+
+      req.user = user;
+      next();
+    } catch (refreshError) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: 'Not authorized to access this route',
+      });
+    }
   }
 };
 
@@ -48,4 +82,66 @@ export const checkVerified = (req, res, next) => {
     });
   }
   next();
+};
+
+export const refreshTokenIfExpired = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+      success: false,
+      message: 'No token provided',
+    });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+    req.user = { id: decoded.id, role: decoded.role };
+    next();
+  } catch (error) {
+    // Token is expired, try to refresh it
+    const refreshToken = req.headers['x-refresh-token'];
+    if (!refreshToken) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: 'No refresh token provided',
+      });
+    }
+
+    try {
+      const decodedRefreshToken = verifyRefreshToken(refreshToken);
+      const user = await User.findById(decodedRefreshToken.id);
+      if (!user || user.refreshToken !== refreshToken) {
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+          success: false,
+          message: 'Invalid refresh token',
+        });
+      }
+
+      // Generate new tokens
+      const newToken = generateToken(user);
+      const newRefreshToken = generateRefreshToken(user);
+
+      user.refreshToken = newRefreshToken;
+      await user.save();
+
+      res.setHeader('x-access-token', newToken);
+      res.setHeader('x-refresh-token', newRefreshToken);
+
+      req.user = { id: decodedRefreshToken.id, role: decodedRefreshToken.role };
+      next();
+    } catch (refreshError) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: 'Not authorized to access this route',
+      });
+    }
+  }
 };
