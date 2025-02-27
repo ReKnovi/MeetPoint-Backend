@@ -6,7 +6,7 @@ import authRoutes from './routes/authRoutes.js';
 import oAuthRoutes from './routes/oauthRoutes.js';
 import session from "express-session";
 import errorHandler from './middleware/errorHandler.js';
-// import professionalRoutes from './routes/professionalRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
 // import appointmentRoutes from './routes/appointmentRoutes.js';
 // import adminRoutes from './routes/adminRoutes.js';
 // import paymentRoutes from './routes/paymentRoutes.js';
@@ -38,7 +38,7 @@ app.use(passport.session());
  */
 app.use('/api/auth', authRoutes);
 app.use('/oauth', oAuthRoutes);
-// app.use('/api/professionals', professionalRoutes);
+app.use('/api/profile', profileRoutes);
 // app.use('/api/appointments', appointmentRoutes);
 // app.use('/api/admin', adminRoutes);
 // app.use('/api/payments', paymentRoutes);
