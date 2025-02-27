@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    image: node:22.14.0
+    container_name: meetpoint-backend
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://db:27017/meetpoint
+    depends_on:
+      - db
+    command: ["npm", "run", "start"]
+
+  db:
+    image: mongo:7
+    container_name: mongo-db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=meetpoint
+
+volumes:
+  mongo-data:
