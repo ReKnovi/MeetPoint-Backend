@@ -35,11 +35,19 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    //profile (created after user verification)
+    profile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Profile'
+    },
     verificationToken: String,
     verificationTokenExpires: Date,
     resetPasswordToken: String,
     resetPasswordTokenExpires: Date,
-    refreshToken: String,
+    refreshToken: {
+      type: String,
+      select: false,
+    }
   },
   {
     timestamps: true,
@@ -58,6 +66,18 @@ userSchema.pre('save', async function (next) {
 // Password comparison method
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Exclude sensitive fields from JSON output
+userSchema.methods.toJSON = function () {
+  const userObject = this.toObject();
+  delete userObject.password;
+  delete userObject.refreshToken;
+  delete userObject.verificationToken;
+  delete userObject.verificationTokenExpires;
+  delete userObject.resetPasswordToken;
+  delete userObject.resetPasswordTokenExpires;
+  return userObject;
 };
 
 const User = mongoose.model('User', userSchema);

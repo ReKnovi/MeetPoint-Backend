@@ -197,7 +197,7 @@ export const verifyEmail = async (req, res) => {
       verificationTokenExpires: { $gt: Date.now() }
     });
 
-     if (!user) {
+    if (!user) {
       return res.redirect(`${process.env.FRONTEND_URL}/verify-email?success=false&message=Invalid%20or%20expired%20token`);
     }
 
@@ -206,7 +206,26 @@ export const verifyEmail = async (req, res) => {
     user.verificationTokenExpires = undefined;
     await user.save();
 
-     res.redirect(`${process.env.FRONTEND_URL}/verify-email?success=true`);
+    // Generate new JWT with updated user payload
+    const token = generateToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // Check the User-Agent header to determine if the request is from a mobile device
+    const userAgent = req.headers['user-agent'];
+    const isMobile = /mobile/i.test(userAgent);
+
+    // Generate the appropriate URL based on the User-Agent
+    const redirectUrl = isMobile
+      ? `myapp://verify-email?success=true&token=${token}`
+      : `${process.env.FRONTEND_URL}/verify-email?success=true&token=${token}`;
+
+      console.log('Redirect URL:', redirectUrl);
+
+    // Redirect to the appropriate URL
+    res.redirect(redirectUrl);
   } catch (error) {
     res.redirect(`${process.env.FRONTEND_URL}/verify-email?success=false&message=${encodeURIComponent(error.message)}`);
   }

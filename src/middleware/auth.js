@@ -21,13 +21,13 @@ export const requireAuth = async (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
-    req.user = { id: decoded.id, role: decoded.role };
+    req.user = decoded.user;
     next();
   } catch (error) {
     // Token is expired, try to refresh it
     try {
       const decoded = jwt.decode(token);
-      const user = await User.findById(decoded.id);
+      const user = await User.findById(decoded.user._id);
       if (!user || !user.refreshToken) {
         return res.status(HTTP_STATUS.UNAUTHORIZED).json({
           success: false,
@@ -103,7 +103,7 @@ export const refreshTokenIfExpired = async (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
-    req.user = { id: decoded.id, role: decoded.role };
+    req.user = decoded.user;
     next();
   } catch (error) {
     // Token is expired, try to refresh it
@@ -117,7 +117,7 @@ export const refreshTokenIfExpired = async (req, res, next) => {
 
     try {
       const decodedRefreshToken = verifyRefreshToken(refreshToken);
-      const user = await User.findById(decodedRefreshToken.id);
+      const user = await User.findById(decodedRefreshToken.user._id);
       if (!user || user.refreshToken !== refreshToken) {
         return res.status(HTTP_STATUS.UNAUTHORIZED).json({
           success: false,
@@ -135,7 +135,7 @@ export const refreshTokenIfExpired = async (req, res, next) => {
       res.setHeader('x-access-token', newToken);
       res.setHeader('x-refresh-token', newRefreshToken);
 
-      req.user = { id: decodedRefreshToken.id, role: decodedRefreshToken.role };
+      req.user = user;
       next();
     } catch (refreshError) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({

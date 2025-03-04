@@ -3,8 +3,8 @@ import passport from 'passport';
 import dotenv from 'dotenv';
 import { generateToken } from '../utils/jwt.js';
 
-const router = express.Router();
 dotenv.config();
+const router = express.Router();
 
 // router.get('/google-authorize', GoogleAuthorize);
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
