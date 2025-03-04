@@ -75,7 +75,6 @@ export const checkRole = (roles) => (req, res, next) => {
 };
 
 export const checkVerified = (req, res, next) => {
-  console.log(req.user);
   if (!req.user.isVerified) {
     return res.status(HTTP_STATUS.FORBIDDEN).json({
       success: false,
