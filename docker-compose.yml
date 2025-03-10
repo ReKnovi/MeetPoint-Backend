@@ -8,11 +8,13 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - MONGO_URI=mongodb://db:27017/meetpoint
+      - FIREBASE_SERVICE_ACCOUNT_KEY=/app/serviceAccountKey.json
     depends_on:
       - db
     command: ["npm", "run", "start"]

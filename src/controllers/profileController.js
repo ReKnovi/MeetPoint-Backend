@@ -9,7 +9,8 @@ export const createProfile = [
   upload.fields([
     { name: 'idProof', maxCount: 1 },
     { name: 'certifications', maxCount: 5 },
-    { name: 'workLicense', maxCount: 1 }
+    { name: 'workLicense', maxCount: 1 },
+    { name: 'profileImage', maxCount: 1 },
   ]),
   async (req, res) => {
     try {
@@ -36,13 +37,16 @@ export const createProfile = [
       };
 
       if (isProfessional) {
-        profileData.isProfessional = true;
+        profileData.isProfessional = isProfessional;
         profileData.serviceCategory = serviceCategory;
         profileData.specialization = specialization;
         profileData.yearsOfExperience = yearsOfExperience;
         profileData.shortBio = shortBio;
         profileData.consultationFee = consultationFee;
 
+        if (req.files['profileImage']) {
+          profileData.documents.profileImage = req.files['profileImage'][0].key || req.files['profileImage'][0].path;
+        }
         if (req.files['idProof']) {
           profileData.documents.idProof = req.files['idProof'][0].key || req.files['idProof'][0].path;
         }
@@ -203,6 +207,47 @@ export const getAllProfiles = async (req, res) => {
       profiles: profilesWithFiles
     });
   } catch (error) {
+    res.status(HTTP_STATUS.SERVER_ERROR).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export const searchProfessionalProfiles = async (req, res) => {
+  try {
+    const filters = req.query;
+
+    let query = Profile.find({ isProfessional: true });
+
+    if (filters.serviceCategory) {
+      query = query.where('serviceCategory').equals(filters.serviceCategory);
+    }
+
+    if (filters.specialization) {
+      query = query.where('specialization').equals(filters.specialization);
+    }
+
+    if (filters.consultationFee_min) {
+      query = query.where('consultationFee').gte(filters.consultationFee_min);
+    }
+
+    if (filters.consultationFee_max) {
+      query = query.where('consultationFee').lte(filters.consultationFee_max);
+    }
+
+    if (filters.name) {
+      query = query.where('name').regex(new RegExp(filters.name, 'i'));
+    }
+
+    const profiles = await query.exec();
+
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      profiles
+    });
+
+  }catch (error) {
     res.status(HTTP_STATUS.SERVER_ERROR).json({
       success: false,
       message: error.message
