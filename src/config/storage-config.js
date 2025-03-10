@@ -1,9 +1,11 @@
+// File: src/config/storage-config.js
 import multer from 'multer';
 import multerS3 from 'multer-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import path from 'path';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import Media from '../models/Media.js'; // Import the Media model
 
 dotenv.config();
 
@@ -28,13 +30,23 @@ if (storageType === 's3') {
     metadata: (req, file, cb) => {
       cb(null, { 
         fieldName: file.fieldname,
-      'Content-Disposition' : 'attachment'
+        'Content-Disposition': 'attachment'
       });
     },
-    key: (req, file, cb) => {
+    key: async (req, file, cb) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const userId = req.user ? req.user._id : 'anonymous';
-      cb(null, `uploads/${userId}/${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
+      const filepath = `uploads/${userId}/${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`;
+      
+      // Save file metadata to the database
+      const media = new Media({
+        filename: file.originalname,
+        filepath,
+        mimetype: file.mimetype
+      });
+      await media.save();
+
+      cb(null, filepath);
     }
   });
 } else {
@@ -45,23 +57,34 @@ if (storageType === 's3') {
       fs.mkdirSync(destPath, { recursive: true });
       cb(null, destPath);
     },
-    filename: (req, file, cb) => {
+    filename: async (req, file, cb) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
+      const filename = `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`;
+      const filepath = path.join(process.env.LOCAL_STORAGE_PATH || 'src/public/uploads/', req.user ? req.user._id : 'anonymous', filename);
+      
+      // Save file metadata to the database
+      const media = new Media({
+        filename: file.originalname,
+        filepath,
+        mimetype: file.mimetype
+      });
+      await media.save();
+
+      cb(null, filename);
     }
   });
 }
 
 // File filter configuration
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
   if (!allowedTypes.includes(file.mimetype)) {
     const error = new Error('Invalid file type');
     error.code = 'LIMIT_FILE_TYPE';
     return cb(error, false);
   }
   
-  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf', '.docx'];
   const ext = path.extname(file.originalname).toLowerCase();
   if (!allowedExtensions.includes(ext)) {
     const error = new Error("Invalid file extension");

@@ -364,3 +364,21 @@ export const resendVerificationEmail = async (req, res) => {
   }
 };
 
+export const newToken = async (req,res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Generate new token
+    const token = generateToken(user);
+
+    res.status(200).json({ success: true, token });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+

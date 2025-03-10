@@ -9,6 +9,9 @@ export const JWT_SECRET = process.env.JWT_SECRET;
 export const JWT_REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_TOKEN_SECRET;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 
+export const FIREBASE_SERVICE_ACCOUNT_KEY = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+export const FIREBASE_DATABASE_URL = process.env.FIREBASE_DATABASE_URL;
+
 // App Constants
 export const USER_ROLES = {
   USER: 'user',
@@ -50,4 +53,20 @@ export const WORKING_HOURS = {
 export const PROFILE_TYPE = {
   USER: 'user',
   PROFESSIONAL: 'professional',
+};
+
+export const SERVICE_CATEGORY = {
+  MEDICAL: 'medical',
+  LEGAL: 'legal',
+  EDUCATIONAL: 'educational',
+  FINANCIAL: 'financial',
+  OTHER: 'other',
+};
+
+export const SPECIALIZATION = {
+  DOCTOR: 'doctor',
+  LAWYER: 'lawyer',
+  TEACHER: 'teacher',
+  ACCOUNTANT: 'accountant',
+  OTHER: 'other',
 };
