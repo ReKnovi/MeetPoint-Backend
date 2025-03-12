@@ -10,11 +10,12 @@ services:
       - /app/node_modules
       - ./serviceAccountKey.json:/app/serviceAccountKey.json
     ports:
-      - "3000:3000"
+      - "3000:5000"
     environment:
       - NODE_ENV=production
       - MONGO_URI=mongodb://db:27017/meetpoint
       - FIREBASE_SERVICE_ACCOUNT_KEY=/app/serviceAccountKey.json
+      - FIREBASE_DATABASE_URL=https://your_project_id.firebaseio.com
     depends_on:
       - db
     command: ["npm", "run", "start"]
