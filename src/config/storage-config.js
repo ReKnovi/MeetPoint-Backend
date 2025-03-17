@@ -66,7 +66,8 @@ if (storageType === 's3') {
       const media = new Media({
         filename: file.originalname,
         filepath,
-        mimetype: file.mimetype
+        mimetype: file.mimetype,
+        user: req.user._id
       });
       await media.save();
 
@@ -77,7 +78,7 @@ if (storageType === 's3') {
 
 // File filter configuration
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
   if (!allowedTypes.includes(file.mimetype)) {
     const error = new Error('Invalid file type');
     error.code = 'LIMIT_FILE_TYPE';
