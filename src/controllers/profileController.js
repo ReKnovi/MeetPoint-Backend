@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import User from '../models/User.js';
 import Profile from '../models/Profile.js';
+import Media from '../models/Media.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import upload from '../config/storage-config.js';
 
@@ -45,18 +46,24 @@ export const createProfile = [
         profileData.consultationFee = consultationFee;
 
         if (req.files['profileImage']) {
-          profileData.documents.profileImage = req.files['profileImage'][0].key || req.files['profileImage'][0].path;
+          const media = await Media.findOne({ filepath: req.files['profileImage'][0].path });
+          profileData.documents.profileImage = media._id;
         }
         if (req.files['idProof']) {
-          profileData.documents.idProof = req.files['idProof'][0].key || req.files['idProof'][0].path;
+          const media = await Media.findOne({ filepath: req.files['idProof'][0].path });
+          profileData.documents.idProof = media._id;
         }
 
         if (req.files['certifications']) {
-          profileData.documents.certifications = req.files['certifications'].map(file => file.key || file.path);
+          profileData.documents.certifications = await Promise.all(req.files['certifications'].map(async (file) => {
+            const media = await Media.findOne({ filepath: file.path });
+            return media._id;
+          }));
         }
 
         if (req.files['workLicense']) {
-          profileData.documents.workLicense = req.files['workLicense'][0].key || req.files['workLicense'][0].path;
+          const media = await Media.findOne({ filepath: req.files['workLicense'][0].path });
+          profileData.documents.workLicense = media._id;
         }
 
         profileData.verificationStatus = 'pending';
@@ -95,13 +102,18 @@ export const getProfile = async (req, res) => {
     // Fetch files associated with the profile
     const files = {};
     if (profile.documents.idProof) {
-      files.idProof = path.join(process.cwd(), profile.documents.idProof);
+      const media = await Media.findById(profile.documents.idProof);
+      files.idProof = media.filepath;
     }
-     if (profile.documents.certifications) {
-      files.certifications = profile.documents.certifications.map(certPath => path.join(process.cwd(), certPath));
+    if (profile.documents.certifications) {
+      files.certifications = await Promise.all(profile.documents.certifications.map(async (id) => {
+        const media = await Media.findById(id);
+        return media.filepath;
+      }));
     }
     if (profile.documents.workLicense) {
-      files.workLicense = path.join(process.cwd(), profile.documents.workLicense);
+      const media = await Media.findById(profile.documents.workLicense);
+      files.workLicense = media.filepath;
     }
 
     res.status(HTTP_STATUS.OK).json({
@@ -154,15 +166,20 @@ export const editProfile = [
         profileData.consultationFee = consultationFee;
 
         if (req.files['idProof']) {
-          profileData.documents.idProof = req.files['idProof'][0].key || req.files['idProof'][0].path;
+          const media = await Media.findOne({ filepath: req.files['idProof'][0].path });
+          profileData.documents.idProof = media._id;
         }
 
         if (req.files['certifications']) {
-          profileData.documents.certifications = req.files['certifications'].map(file => file.key || file.path);
+          profileData.documents.certifications = await Promise.all(req.files['certifications'].map(async (file) => {
+            const media = await Media.findOne({ filepath: file.path });
+            return media._id;
+          }));
         }
 
         if (req.files['workLicense']) {
-          profileData.documents.workLicense = req.files['workLicense'][0].key || req.files['workLicense'][0].path;
+          const media = await Media.findOne({ filepath: req.files['workLicense'][0].path });
+          profileData.documents.workLicense = media._id;
         }
 
         profileData.verificationStatus = 'pending';
