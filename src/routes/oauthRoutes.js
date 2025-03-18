@@ -1,28 +1,67 @@
-import express from "express";
-import passport from 'passport';
-import dotenv from 'dotenv';
-import { generateToken } from '../utils/jwt.js';
+import express from 'express';
+import User from '../models/User.js';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
+import { generateRefreshToken, generateToken } from '../utils/jwt.js';
 
-dotenv.config();
 const router = express.Router();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// router.get('/google-authorize', GoogleAuthorize);
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.post('/google', async (req, res) => {
+  const { token, email, name } = req.body;
 
-router.get("/google/callback", passport.authenticate('google', { failureRedirect: '/' }),
-  function(req, res) {
-    // Generate access token
-    const token = generateToken(req.user);
+  try {
+    // ✅ Directly verify the token without exchanging it
+    const ticket = await client.verifyIdToken({
+      idToken: token, // Use the token directly
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
 
-    // Log the generated token for debugging purposes
-    console.log('Generated Token:', token);
+    const payload = ticket.getPayload();
 
-    // Set HTTP-only cookie with access token
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    // ✅ Ensure the email from the payload matches the frontend email
+    if (payload.email !== email) {
+      return res.status(400).json({ message: 'Invalid token' });
+    }
 
-    // Redirect to frontend URL
-    res.redirect(`${process.env.FRONTEND_URL}/`);
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const randomPassword = crypto.randomBytes(20).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      user = new User({
+        name,
+        email,
+        role: 'user',
+        password: hashedPassword,
+        isVerified: true,
+        isOauth: true,
+      });
+
+      const refreshToken = generateRefreshToken(user);
+      user.refreshToken = refreshToken;
+      await user.save();
+    }
+
+    // ✅ Generate JWT token for the user
+    const jwtToken = generateToken(user);
+
+    res.json({  success: true,
+                token: jwtToken, 
+                 user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isVerified: user.isVerified
+          }, 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Authentication failed', error: error.message });
   }
-);
+});
 
 export default router;

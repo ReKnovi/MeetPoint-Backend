@@ -1,11 +1,7 @@
 import passport from 'passport';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
-import { generateRefreshToken } from '../utils/jwt.js';
 import User from '../models/User.js';
 import dotenv from 'dotenv';
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 dotenv.config();
 
@@ -25,43 +21,6 @@ passport.use(new JwtStrategy(jwtOptions, async (jwtPayload, done) => {
     }
     
     // Add additional checks if needed (e.g., token version)
-    return done(null, user);
-  } catch (error) {
-    return done(error, false);
-  }
-}));
-
-passport.use(new GoogleStrategy({
-
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL,
-    scope: ['profile', 'email'],
-  },
-     async (accessToken, refreshToken, profile, done) => {
-  try {
-    let user = await User.findOne({ email: profile.emails[0].value });
-
-    if (!user) {
-
-      const randomPassword = crypto.randomBytes(20).toString('hex');
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-      user = new User({
-        name: profile.displayName,
-        email: profile.emails[0].value,
-        role: 'user',
-        password: hashedPassword,
-        isVerified: true,
-        isOauth: true
-      });
-      
-      const refreshToken = generateRefreshToken(user);
-
-      user.refreshToken = refreshToken;
-      await user.save();
-    }
-
     return done(null, user);
   } catch (error) {
     return done(error, false);
