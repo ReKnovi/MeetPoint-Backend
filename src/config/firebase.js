@@ -6,7 +6,7 @@ import { FIREBASE_SERVICE_ACCOUNT_KEY, FIREBASE_DATABASE_URL } from './constants
 
 dotenv.config();
 
-const serviceAccount = JSON.parse(fs.readFileSync(FIREBASE_SERVICE_ACCOUNT_KEY, 'utf8'));
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
