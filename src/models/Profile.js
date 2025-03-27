@@ -29,6 +29,8 @@ const profileSchema = new mongoose.Schema({
   
   // Profile Image
   profileImage: String,
+
+  averageRating: { type: Number, default: 0 },
   
   // Timestamps
   createdAt: { type: Date, default: Date.now },

@@ -14,6 +14,7 @@ import mediaRoutes from './routes/mediaRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 import availabilityRoutes from './routes/availabilityRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 // import adminRoutes from './routes/adminRoutes.js';
 // import paymentRoutes from './routes/paymentRoutes.js';
 import './config/passport.js';
@@ -52,6 +53,7 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/appointment', appointmentRoutes);
 app.use('/api/availibility', availabilityRoutes);
 app.use('/api/notification', notificationRoutes);
+app.use('/api/review', reviewRoutes);
 // app.use('/api/admin', adminRoutes);
 // app.use('/api/payments', paymentRoutes);
 

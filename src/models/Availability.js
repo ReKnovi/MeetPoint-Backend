@@ -6,38 +6,29 @@ const availabilitySchema = new mongoose.Schema({
     ref: 'User', 
     required: true 
   },
-  days: [{
+  timezone: {
+      type: String,
+      default: 'UTC'
+    },
+  schedule: [{
     day: {
       type: String,
       enum: ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
       required: true
     },
-    slots: [{
-      start: {
-        type: Date,
-        required: true
-      },
-      end: {
-        type: Date,
-        required: true
-      },
-      available: {
-        type: Boolean,
-        default: true
-      }
-    }]
-  }],
-  exceptions: [{
-    date: {
-      type: Date,
+    startTime: {
+      type: String,
       required: true
     },
-    reason: String,
-    available: {
+    endTime: {
+      type: String,
+      required: true
+    },
+    isAvailable: {
       type: Boolean,
-      default: false
+      default: true
     }
-  }]
+  }],
 });
 
 const Availability = mongoose.model('Availability', availabilitySchema);

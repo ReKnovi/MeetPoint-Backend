@@ -1,4 +1,3 @@
-// File: src/controllers/notificationController.js
 import { sendPushNotification } from '../services/notificationService.js';
 import User from '../models/User.js'; 
 import { HTTP_STATUS } from '../config/constants.js';
